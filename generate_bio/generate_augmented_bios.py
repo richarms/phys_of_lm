@@ -96,18 +96,6 @@ def generate_biographies(n=n_bios, bio_file="synthetic_biographies.txt", qa_file
                 major=major
             )
 
-            # Generate a set of QAs 
-            template = random.choice(qa_templates)
-            qa_set = template.format(
-                name=full_name,
-                birth_date=birth_date,
-                birth_city=birthplace,
-                college=university,
-                employer=company,
-                employer_city=company_city,
-                major=major
-            )
-
             # randomly rewrite every tenth bio with ollama
             if random.random() < 1.:#0.1:
                 biography = ollama.chat(model='mistral', messages=[
@@ -123,6 +111,18 @@ def generate_biographies(n=n_bios, bio_file="synthetic_biographies.txt", qa_file
 
             # Write the biographies to file
             bio_f.write(biography)
+
+            # Generate a set of QAs 
+            template = random.choice(qa_templates)
+            qa_set = template.format(
+                name=full_name,
+                birth_date=birth_date,
+                birth_city=birthplace,
+                college=university,
+                employer=company,
+                employer_city=company_city,
+                major=major
+            )
 
             # Write the QA set to file
             qa_f.write(qa_set)
