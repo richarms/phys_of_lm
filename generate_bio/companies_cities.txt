@@ -1,0 +1,10 @@
+Meta Platforms: Menlo Park, CA
+Google: Mountain View, CA
+Microsoft: Redmond, WA
+Amazon: Seattle, WA
+Apple: Cupertino, CA
+Tesla: Palo Alto, CA
+Netflix: Los Gatos, CA
+Oracle: Austin, TX
+IBM: Armonk, NY
+Intel: Santa Clara, CA

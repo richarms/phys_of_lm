@@ -1,0 +1,100 @@
+Harvard University
+Stanford University
+Massachusetts Institute of Technology (MIT)
+California Institute of Technology (Caltech)
+University of Chicago
+Princeton University
+Yale University
+Columbia University
+University of Pennsylvania
+Duke University
+Johns Hopkins University
+Northwestern University
+University of California, Berkeley
+University of California, Los Angeles (UCLA)
+Cornell University
+University of Michigan, Ann Arbor
+University of Southern California (USC)
+University of North Carolina, Chapel Hill
+New York University (NYU)
+University of Virginia
+Vanderbilt University
+Brown University
+Dartmouth College
+Rice University
+University of Notre Dame
+Emory University
+University of California, San Diego (UCSD)
+Georgetown University
+University of Washington
+Washington University in St. Louis
+Carnegie Mellon University
+University of Texas, Austin
+Boston College
+University of Florida
+University of Wisconsin, Madison
+Georgia Institute of Technology
+Tufts University
+University of Illinois, Urbana-Champaign
+University of Miami
+Boston University
+University of Rochester
+University of California, Davis
+University of California, Irvine
+Pennsylvania State University
+Wake Forest University
+University of Maryland, College Park
+Pepperdine University
+Case Western Reserve University
+University of Georgia
+University of Pittsburgh
+University of Minnesota, Twin Cities
+Ohio State University
+Purdue University
+Syracuse University
+University of Colorado, Boulder
+Indiana University, Bloomington
+University of Connecticut
+Michigan State University
+Rutgers University, New Brunswick
+Southern Methodist University
+University of Delaware
+University of South Carolina
+University of Massachusetts, Amherst
+Fordham University
+Clemson University
+University of Tennessee, Knoxville
+American University
+University of Iowa
+University of Missouri
+University of Oregon
+University of Vermont
+Santa Clara University
+Baylor University
+Texas A&M University
+Stevens Institute of Technology
+Florida State University
+Colorado School of Mines
+University of Tulsa
+University of Denver
+Marquette University
+Gonzaga University
+Bryn Mawr College
+College of William & Mary
+Smith College
+Wellesley College
+Mount Holyoke College
+University of Richmond
+Occidental College
+Trinity University
+Davidson College
+Haverford College
+Grinnell College
+Reed College
+Kenyon College
+Macalester College
+University of San Francisco
+Loyola University Chicago
+Clark University
+University of New Hampshire
+St. Olaf College
