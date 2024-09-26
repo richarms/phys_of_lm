@@ -4,7 +4,7 @@ import textwrap
 import ollama
 
 # output_file = 'BioS.txt'
-n_bios=20
+n_bios=10000
 
 # Data lists
 with open('first_names.txt', 'r') as file:
@@ -57,15 +57,14 @@ def random_date(start_year=1890, end_year=2004):
 # Function to generate a unique full name
 def generate_unique_name(first_names, last_names, used_names):
     while True:
-        first_idx = random.randint(0, len(first_names) - 1)
         # first 200 names are male, rest are female
-        pronoun = 'He' if first_idx < 200 else 'She'
+        first_idx = random.randint(0, len(first_names) - 1)
         first = first_names[first_idx]
         last = random.choice(last_names)
         full_name = f"{first} {last}"
         if full_name not in used_names:
             used_names.add(full_name)
-            return full_name, pronoun
+            return full_name, 'He' if first_idx < 200 else 'She'
 
 # Main function to generate biographies
 def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", qa_file="output/question_answer_pairs.txt"):
@@ -101,17 +100,17 @@ def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", 
             )
 
             # randomly rewrite every tenth bio with ollama
-            if random.random() < 1.:#0.1:
+            if random.random() < 0.1:
                 biography = ollama.chat(model='llama3.2', messages=[
                         {
                             'role': 'user',
-                            'content': f'rewrite and reorder the following sentence in a narrative, concise manner. Make sure to use the subjects full name at some point: {biography}',
+                            'content': f'rewrite and reorder the following sentence in a narrative, concise manner. Make sure to use the subjects full name at some point. Return just the rewritten content: {biography}',
                         },
-                    ])['message']['content'] + '\n'
+                    ])['message']['content'] 
 
 
-            # Wrap the biography text to 60 characters
-            # biography = textwrap.fill(biography, width=60)
+            # Wrap the biography text to 88 characters
+            biography = textwrap.fill(biography, width=88) + '\n'
 
             # Write the biographies to file
             bio_f.write(biography)
@@ -127,6 +126,8 @@ def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", 
                 employer_city=company_city,
                 major=major
             )
+            # Wrap the QA set text to 88 characters
+            qa_set = textwrap.fill(qa_set, width=88) + '\n'
 
             # Write the QA set to file
             qa_f.write(qa_set)
