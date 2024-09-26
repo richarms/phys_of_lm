@@ -30,12 +30,12 @@ majors = ["Computer Science", "Electrical Engineering", "Mechanical Engineering"
 #     universities = [line.strip() for line in file]
 
 bio_templates = [
-    "{name} was born on {birth_date} in {birth_city}. After graduating from {college} with a speciality in {major}, {name} went on to work at {employer} in {employer_city}.",
+    "{name} was born on {birth_date} in {birth_city}. After graduating from {college} with a speciality in {major}, {pronoun} went on to work at {employer} in {employer_city}.",
     "{name}, born on {birth_date} in {birth_city}, pursued higher education at {college}. Now, {name} works for {employer} located in {employer_city}.",
     "Hailing from {birth_city}, {name} was born on {birth_date}. {name} attended {college} and currently works at {employer} in {employer_city}.",
-    "Born in {birth_city} on {birth_date}, {name} studied at {college}. {name} now works for {employer} in {employer_city}.",
+    "Born in {birth_city} on {birth_date}, {name} studied at {college}. {pronoun} now works for {employer} in {employer_city}.",
     "On {birth_date}, {name} was born in {birth_city}. After completing a degree at {college}, {name} secured a position at {employer}, based in {employer_city}.",
-    "{name} was born on {birth_date}. They were born in {birth_city}. They attended {college}. They completed their education with a focus on {major}. They were employed at at {employer} in {employer_city}.",
+    "{name} was born on {birth_date}. {pronoun} was born in {birth_city}. {pronoun} attended {college}. {pronoun} completed their education with a focus on {major}. {pronoun} was employed at at {employer} in {employer_city}.",
 ]
 
 qa_templates = [
@@ -57,12 +57,15 @@ def random_date(start_year=1890, end_year=2004):
 # Function to generate a unique full name
 def generate_unique_name(first_names, last_names, used_names):
     while True:
-        first = random.choice(first_names)
+        first_idx = random.randint(0, len(first_names) - 1)
+        # first 200 names are male, rest are female
+        pronoun = 'He' if first_idx < 200 else 'She'
+        first = first_names[first_idx]
         last = random.choice(last_names)
         full_name = f"{first} {last}"
         if full_name not in used_names:
             used_names.add(full_name)
-            return full_name
+            return full_name, pronoun
 
 # Main function to generate biographies
 def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", qa_file="output/question_answer_pairs.txt"):
@@ -70,7 +73,7 @@ def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", 
     with open(bio_file, "w") as bio_f, open(qa_file, "w") as qa_f:
         for _ in range(n):
             # Generate unique name
-            full_name = generate_unique_name(first_names, last_names, used_names)
+            full_name, pronoun = generate_unique_name(first_names, last_names, used_names)
             
             # Generate birth date
             birth_date = random_date()
@@ -93,7 +96,8 @@ def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", 
                 college=university,
                 employer=company,
                 employer_city=company_city,
-                major=major
+                major=major,
+                pronoun=pronoun
             )
 
             # randomly rewrite every tenth bio with ollama
