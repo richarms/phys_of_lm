@@ -65,7 +65,7 @@ def generate_unique_name(first_names, last_names, used_names):
             return full_name
 
 # Main function to generate biographies
-def generate_biographies(n=n_bios, bio_file="synthetic_biographies.txt", qa_file="question_answer_pairs.txt"):
+def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", qa_file="output/question_answer_pairs.txt"):
     used_names = set()
     with open(bio_file, "w") as bio_f, open(qa_file, "w") as qa_f:
         for _ in range(n):

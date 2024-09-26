@@ -1,5 +1,4 @@
 edu_fineweb10B/
 log/
-generate_bio/synthetic_biographies.txt
-generate_bio/question_answer_pairs.txt
+generate_bio/output
 __pychache__/*
