@@ -102,10 +102,10 @@ def generate_biographies(n=n_bios, bio_file="output/synthetic_biographies.txt", 
 
             # randomly rewrite every tenth bio with ollama
             if random.random() < 1.:#0.1:
-                biography = ollama.chat(model='mistral', messages=[
+                biography = ollama.chat(model='llama3.2', messages=[
                         {
                             'role': 'user',
-                            'content': f'rewrite and reorder the following sentence in a narrative way, and try to infer most likely pronouns from their first name. Make sure to use their full name at some point: {biography}',
+                            'content': f'rewrite and reorder the following sentence in a narrative, concise manner. Make sure to use the subjects full name at some point: {biography}',
                         },
                     ])['message']['content'] + '\n'
 
