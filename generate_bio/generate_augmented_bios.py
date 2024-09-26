@@ -35,7 +35,7 @@ bio_templates = [
     "Hailing from {birth_city}, {name} was born on {birth_date}. {name} attended {college} and currently works at {employer} in {employer_city}.",
     "Born in {birth_city} on {birth_date}, {name} studied at {college}. {name} now works for {employer} in {employer_city}.",
     "On {birth_date}, {name} was born in {birth_city}. After completing a degree at {college}, {name} secured a position at {employer}, based in {employer_city}.",
-    "{name} was born on {birth_date}. They were born in {birth_city}. They attended {college}. They completed their education with a focus on {major}. They were employed at at {employer} in {cemployer_city}.",
+    "{name} was born on {birth_date}. They were born in {birth_city}. They attended {college}. They completed their education with a focus on {major}. They were employed at at {employer} in {employer_city}.",
 ]
 
 qa_templates = [
