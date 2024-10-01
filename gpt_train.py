@@ -1,14 +1,19 @@
-import math
-import time
 from dataclasses import dataclass
+import logging
+import math
 import numpy as np
+import os
+import random
 import tiktoken
+import time
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-import transformers
+# import transformers
 
 # -----------------------------------------------------------------------------
+logger = logging.getLogger()
+logging.basicConfig(level=logging.INFO) 
 
 enc = tiktoken.get_encoding("gpt2")
 
@@ -18,11 +23,10 @@ if torch.cuda.is_available():
     device = "cuda"
 elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
-print(f'Using device: ', device)
-
+logging.info(f'Using device: {device}')
 device_type = "cuda" if device.startswith("cuda") else "cpu"
 
-torch.set_float32_matmul_precision('high')
+torch.set_float32_matmul_precision('medium')
 
 # -----------------------------------------------------------------------------
 
@@ -149,7 +153,7 @@ class GPT(nn.Module):
         """Loads pretrained GPT-2 model weights from huggingface"""
         assert model_type in {'gpt2', 'gpt2-rich', 'gpt2-medium', 'gpt2-large', 'gpt2-xl'}
         from transformers import GPT2LMHeadModel
-        print("loading weights from pretrained gpt: %s" % model_type)
+        logging.info(f'loading weights from pretrained gpt: {model_type}')
 
         # n_layer, n_head and n_embd are determined from model_type
         config_args = {
@@ -194,6 +198,57 @@ class GPT(nn.Module):
 
         return model
 
+class DataLoaderFineWeb:
+    def __init__(self, B, T, split):
+        self.B = B
+        self.T = T
+        assert split in {'train', 'val'}
+
+        # get the shard filenames
+        data_root = "edu_fineweb10B"
+        shards = os.listdir(data_root)
+        shards = [s for s in shards if split in s]
+        shards = sorted(shards)
+        shards = [os.path.join(data_root, s) for s in shards]
+        self.shards = shards
+        assert len(shards) > 0, f"no shards found for split {split}"
+        logging.info(f"found {len(shards)} shards for split {split}")
+        self.reset()
+    
+    def load_tokens(self, filename):
+        npt = np.load(filename).astype(np.int32)
+        ptt = torch.tensor(npt, dtype=torch.long)
+        return ptt
+
+    def reset(self):
+        # Shuffle the shards at the start of each epoch
+        random.shuffle(self.shards)
+        self.current_shard = 0
+        self.tokens = self.load_tokens(self.shards[self.current_shard])
+        self.current_position = 0  # Reset position
+
+    def __iter__(self, num_batches=None):
+        num_batches = num_batches or float('inf')  # Iterate infinitely unless limited
+        batch_count = 0
+        B, T = self.B, self.T
+
+        while batch_count < num_batches:
+            buf = self.tokens[self.current_position : self.current_position + B * T + 1]
+            x = buf[:-1].view(B, T)  # inputs
+            y = buf[1:].view(B, T)  # targets
+            
+            # advance the position in the tensor
+            self.current_position += B * T
+
+            # if loading the next batch would be out of bounds, advance to next shard
+            if self.current_position + (B * T + 1) > len(self.tokens):
+                self.current_shard = (self.current_shard + 1) % len(self.shards)
+                self.tokens = self.load_tokens(self.shards[self.current_shard])
+                self.current_position = 0  # Reset position to the start of the new shard
+
+            yield x, y
+            batch_count += 1
+
 class DataLoader:
     def __init__(self, data, encoder, batch_size, seq_len):
         self.B = batch_size
@@ -203,8 +258,8 @@ class DataLoader:
         with open(data) as f:
             self.data = f.read()
         self.tokens = torch.tensor(encoder.encode(self.data))
-        print(f'loaded {len(self.tokens)} tokens')
-        print(f'1 epoch = {len(self.tokens) // (self.B * self.T)} batches')
+        logging.info(f'loaded {len(self.tokens)} tokens')
+        logging.info(f'1 epoch = {len(self.tokens) // (self.B * self.T)} batches')
 
         # state
         self.current_idx = 0
@@ -221,7 +276,6 @@ class DataLoader:
             self.current_idx += B*T
             yield x, y
 
-BioS = 'synthetic_augmented_biographies.txt'
 
 model = GPT.from_pretrained('gpt2')
 # model = GPT(GPTConfig(vocab_size=50304))
@@ -237,12 +291,17 @@ grad_accum_steps: int = total_batch_size // (B * GPTConfig.block_size)
 
 min_lr:float = 6e-5
 max_lr:float = 6e-4
-max_steps: int = 100 #19073
-warmup_steps: int = 5 #715
+max_steps: int = 19073 #100
+warmup_steps: int = 715 #5
 
 optimizer = torch.optim.AdamW(model.parameters(), betas=(0.9, 0.95), eps=1e-8, lr=max_lr, fused=True)
+
+BioS = 'synthetic_augmented_biographies.txt'
 # train_loader = DataLoader(data='input.txt', encoder=enc, batch_size=B, seq_len=GPTConfig.block_size)
 train_loader = DataLoader(data=BioS, encoder=enc, batch_size=B, seq_len=GPTConfig.block_size)
+bio_loader = DataLoaderFineWeb(B, GPTConfig.block_size, 'train')
+# always validate on fineweb
+val_loader = DataLoaderFineWeb(B, GPTConfig.block_size, 'val')
 
 def get_lr(step=0):
     # linear warmup
@@ -261,7 +320,8 @@ for step in range(max_steps):
     optimizer.zero_grad()
     loss_accum = 0.0
     for micro_step in range(grad_accum_steps):
-        x, y = next(iter(train_loader))
+        # 10% of the time, load data from the 2nd dataset
+        x, y = next(iter(train_loader)) if random.random() < 0.1 else next(iter(bio_loader))
         x, y = x.to(device), y.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits, loss = model(x, targets=y)
@@ -277,8 +337,25 @@ for step in range(max_steps):
     torch.cuda.synchronize()
     dt = time.time() - t0
     tokens_per_second = (grad_accum_steps * B * GPTConfig.block_size) / dt
-    print(f'step: {step} | loss: {loss_accum.item():.3f} | time: {dt*1000:.2f}ms | tok/s: {tokens_per_second} | norm: {norm:.4f} | lr: {lr:.5f}')
+    logging.info(f'step: {step} | loss: {loss_accum.item():.3f} | time: {dt*1000:.2f}ms | tok/s: {tokens_per_second} | norm: {norm:.4f} | lr: {lr:.5f}')
 
+
+# once in a while evaluate our validation loss
+    if step % 250 == 0 or step == max_steps - 1:
+        model.eval()
+        val_loader.reset()
+        with torch.no_grad():
+            val_loss_accum = 0.0
+            val_loss_steps = 20
+            for _ in range(val_loss_steps):
+                x, y = next(iter(val_loader))
+                x, y = x.to(device), y.to(device)
+                with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                    logits, loss = model(x, y)
+                loss = loss / val_loss_steps
+                val_loss_accum += loss.detach()
+
+        logging.info(f"validation loss: {val_loss_accum.item():.4f}")
 
 # import sys; sys.exit(0)
 
