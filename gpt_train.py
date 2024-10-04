@@ -315,13 +315,14 @@ def get_lr(step=0):
 
 
 # optimise
-for step in range(max_steps):
+for step in range(1,max_steps):
     t0 = time.time()
+    model.train()
     optimizer.zero_grad()
     loss_accum = 0.0
     for micro_step in range(grad_accum_steps):
         # 10% of the time, load data from the 2nd dataset
-        x, y = next(iter(train_loader)) if random.random() < 0.1 else next(iter(bio_loader))
+        x, y = next(iter(train_loader)) if random.random() > 0.1 else next(iter(bio_loader))
         x, y = x.to(device), y.to(device)
         with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
             logits, loss = model(x, targets=y)
@@ -356,6 +357,45 @@ for step in range(max_steps):
                 val_loss_accum += loss.detach()
 
         logging.info(f"validation loss: {val_loss_accum.item():.4f}")
+    # save the model
+    # if step % 1000 == 0 or step == max_steps - 1:
+    #    model.save_checkpoint(f'checkpoint_{step}.pt')
+
+    # once in a while generate from the model (except step 0, which is noise)
+    if ((step > 0 and step % 250 == 0) or (step == max_steps - 1)) :#and (not use_compile):
+        model.eval()
+        num_return_sequences = 4
+        max_length = 32
+        tokens = enc.encode("One person who has been on my mind of late is ")
+        tokens = torch.tensor(tokens, dtype=torch.long)
+        tokens = tokens.unsqueeze(0).repeat(num_return_sequences, 1)
+        xgen = tokens.to(device)
+        sample_rng = torch.Generator(device=device)
+        sample_rng.manual_seed(42)
+        while xgen.size(1) < max_length:
+            # forward the model to get the logits
+            with torch.no_grad():
+                with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
+                    logits, loss = model(xgen) # (B, T, vocab_size)
+                # take the logits at the last position
+                logits = logits[:, -1, :] # (B, vocab_size)
+                # get the probabilities
+                probs = F.softmax(logits, dim=-1)
+                # do top-k sampling of 50 (huggingface pipeline default)
+                # topk_probs here becomes (5, 50), topk_indices is (5, 50)
+                topk_probs, topk_indices = torch.topk(probs, 50, dim=-1)
+                # select a token from the top-k probabilities
+                # note: multinomial does not demand the input to sum to 1
+                ix = torch.multinomial(topk_probs, 1, generator=sample_rng) # (B, 1)
+                # gather the corresponding indices
+                xcol = torch.gather(topk_indices, -1, ix) # (B, 1)
+                # append to the sequence
+                xgen = torch.cat((xgen, xcol), dim=1)
+        # print the generated text
+        for i in range(num_return_sequences):
+            tokens = xgen[i, :max_length].tolist()
+            decoded = enc.decode(tokens)
+            print(f"sample {i}: {decoded}")
 
 # import sys; sys.exit(0)
 
