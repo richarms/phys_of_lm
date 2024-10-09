@@ -1,4 +1,5 @@
+checkpoints/
 edu_fineweb10B/
 log/
 generate_bio/output
-__pychache__/*
+__pychache__/

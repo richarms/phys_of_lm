@@ -245,6 +245,7 @@ BATCH_SIZE = 16  # Micro batch size
 TOTAL_BATCH_SIZE = 524288  # = 512 * GPTConfig.block_size
 MAX_STEPS = 19073
 WARMUP_STEPS = 715
+CHECKPOINT_EVERY = 10
 MIN_LR = 6e-5
 MAX_LR = 6e-4
 
@@ -274,7 +275,7 @@ optimizer = torch.optim.AdamW(model.parameters(), betas=(0.9, 0.95), eps=1e-8, l
 
 # Training loop
 def train_model(model, train_loader, bio_loader, val_loader):
-    for step in range(1, MAX_STEPS):
+    for step in range(MAX_STEPS):
         start_time = time.time()
         model.train()
         optimizer.zero_grad()
@@ -282,8 +283,8 @@ def train_model(model, train_loader, bio_loader, val_loader):
         total_loss = 0.0
         for _ in range(grad_accum_steps):
             # Choose between fineweb and bios data with 0.1 prob
-            # x, y = next(iter(train_loader)) if random.random() > 0.1 else next(iter(bio_loader))
-            x, y = next(iter(bio_loader))
+            x, y = next(iter(train_loader)) if random.random() > 0.1 else next(iter(bio_loader))
+            # x, y = next(iter(bio_loader))
             x, y = x.to(device), y.to(device)
 
             with torch.autocast(device_type=device_type, dtype=torch.bfloat16):
@@ -313,7 +314,7 @@ def train_model(model, train_loader, bio_loader, val_loader):
             val_loss = validate_model(model, val_loader)
 
         # Model checkpoints 
-        if step > 0 and (step % 2000 == 0 or step == MAX_STEPS - 1):
+        if step > 0 and (step % CHECKPOINT_EVERY == 0 or step == MAX_STEPS - 1):
                 checkpoint_path = os.path.join('./checkpoints/', f"model_{step:05d}.pt")
                 checkpoint = {
                     'model': model.state_dict(),
@@ -344,7 +345,7 @@ def validate_model(model, val_loader):
     return total_val_loss
 
 # Sampling function
-def generate_samples(model, prompt="I am a language model and  ", num_sequences=4, max_length=32):
+def generate_samples(model, prompt="I am a language model and ", num_sequences=4, max_length=32):
     model.eval()
     tokens = torch.tensor(enc.encode(prompt), dtype=torch.long).unsqueeze(0).repeat(num_sequences, 1).to(device)
     sample_rng = torch.Generator(device=device)
@@ -372,7 +373,5 @@ if __name__ == "__main__":
     val_loader = DataLoaderFineWeb(BATCH_SIZE, GPTConfig.block_size, 'val')
 
     train_model(model, train_loader, bio_loader, val_loader)
-
-    finetune_model(model, bio_loader, val_loader)
 
     generate_samples(model)
