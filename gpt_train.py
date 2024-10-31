@@ -15,12 +15,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
 
 # Device configuration
-device = "cpu"
-if torch.cuda.is_available():
-    device = "cuda"
-elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
-    device = "mps"
-logging.info(f'Using device: {device}')
+def infer_device() -> str:
+    if torch.cuda.is_available():
+        return "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+device = infer_device()
 device_type = "cuda" if device.startswith("cuda") else "cpu"
 torch.set_float32_matmul_precision('medium')
 
@@ -320,9 +322,10 @@ def train_model(model, train_loader, bio_loader, val_loader):
                     'model': model.state_dict(),
                     'config': model.config,
                     'step': step,
-                    'val_loss': val_loss.item()
+                    'val_loss': val_loss.item(),
+                    'optimizer': optimizer.state_dict(),
+                    'rng_state': torch.get_rng_state(),
                 }
-                # add optimizer.state_dict(), seeds, etc. if more exact training resumption required
                 torch.save(checkpoint, checkpoint_path)
 
 # Validation
